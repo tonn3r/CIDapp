@@ -5,17 +5,17 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginStart="16dp"
-    android:layout_marginEnd="16dp"
-    android:layout_marginTop="8dp"
-    android:layout_marginBottom="8dp"
+    android:layout_marginStart="12dp"
+    android:layout_marginEnd="12dp"
+    android:layout_marginTop="6dp"
+    android:layout_marginBottom="6dp"
     app:cardElevation="2dp"
     app:cardCornerRadius="12dp">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="16dp"
+        android:padding="10dp"
         tools:ignore="ExtraText">
 
         <com.google.android.material.checkbox.MaterialCheckBox
@@ -30,7 +30,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
-        android:layout_marginEnd="12dp"/>
+        android:layout_marginEnd="8dp"/>
 
         <TextView
             android:id="@+id/txtCodigo"
@@ -57,7 +57,7 @@
         app:layout_constraintStart_toEndOf="@id/txtCodigo"
         app:layout_constraintTop_toTopOf="@id/txtCodigo"
         app:layout_constraintBottom_toBottomOf="@id/txtCodigo"
-        android:layout_marginStart="8dp"/>
+        android:layout_marginStart="6dp"/>
         <!--
             android:visibility e tools:visibility não são mais necessários aqui,
             a lógica de estar marcado ou não virá do estado 'cid.deficiencia'
@@ -72,7 +72,7 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="@id/txtCodigo"
             app:layout_constraintBottom_toBottomOf="@id/txtCodigo"
-            android:layout_marginStart="12dp"
+            android:layout_marginStart="8dp"
             tools:text="Descrição detalhada do Código Internacional de Doenças" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>

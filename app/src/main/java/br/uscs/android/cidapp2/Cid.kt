@@ -5,5 +5,7 @@ data class Cid(
     val codigo: String,
     val descricao: String,
     var favorito: Boolean = false,
-    var deficiencia: Boolean = false
+    var deficiencia: Boolean = false,
+    val capitulo: String,
+    val capitulo_descricao: String
 )
