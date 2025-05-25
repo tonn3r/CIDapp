@@ -1,0 +1,30 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Base.Theme.CIDapp2" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/m3_light_primary</item>
+        <item name="colorOnPrimary">@color/m3_light_on_primary</item>
+        <item name="colorPrimaryContainer">@color/m3_light_primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/m3_light_on_primary_container</item>
+        <item name="colorSecondary">@color/m3_light_secondary</item>
+        <item name="colorOnSecondary">@color/m3_light_on_secondary</item>
+        <item name="colorSecondaryContainer">@color/m3_light_secondary_container</item>
+        <item name="colorOnSecondaryContainer">@color/m3_light_on_secondary_container</item>
+        <item name="colorTertiary">@color/m3_light_tertiary</item>
+        <item name="colorOnTertiary">@color/m3_light_on_tertiary</item>
+        <item name="colorTertiaryContainer">@color/m3_light_tertiary_container</item>
+        <item name="colorOnTertiaryContainer">@color/m3_light_on_tertiary_container</item>
+        <item name="colorError">@color/m3_light_error</item>
+        <item name="colorOnError">@color/m3_light_on_error</item>
+        <item name="colorErrorContainer">@color/m3_light_error_container</item>
+        <item name="colorOnErrorContainer">@color/m3_light_on_error_container</item>
+        <item name="android:colorBackground">@color/m3_light_background</item>
+        <item name="colorOnBackground">@color/m3_light_on_background</item>
+        <item name="colorSurface">@color/m3_light_surface</item>
+        <item name="colorOnSurface">@color/m3_light_on_surface</item>
+        <item name="colorSurfaceVariant">@color/m3_light_surface_variant</item>
+        <item name="colorOnSurfaceVariant">@color/m3_light_on_surface_variant</item>
+        <item name="colorOutline">@color/m3_light_outline</item>
+        <item name="android:statusBarColor" tools:targetApi="l">?attr/colorSurface</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="m">true</item>
+    </style>
+    <style name="Theme.CIDapp2" parent="Base.Theme.CIDapp2" />
+</resources>
