@@ -1,81 +1,102 @@
 package br.uscs.android.cidapp2
 
+import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
-import android.util.Log
-import android.widget.ImageButton
+import android.widget.Toast
+import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
+import androidx.core.view.GravityCompat
+import androidx.drawerlayout.widget.DrawerLayout
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import br.uscs.android.cidapp2.databinding.ActivityMainBinding
+import com.google.android.material.navigation.NavigationView
 import com.google.android.material.textfield.TextInputEditText
 
-// Se FilterState.kt está em um arquivo separado, o import é automático se no mesmo pacote.
-// Se você moveu para outro pacote, ajuste o import.
-// import br.uscs.android.cidapp2.FilterState // Desnecessário se no mesmo pacote.
+class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
 
-class MainActivity : AppCompatActivity() {
-
+    private lateinit var binding: ActivityMainBinding
+    private lateinit var toggle: ActionBarDrawerToggle
+    private lateinit var cidAdapter: CidAdapter
     private lateinit var dbHelper: CidDatabaseHelper
-    private lateinit var recyclerView: RecyclerView
-    private lateinit var adapter: CidAdapter
-    private lateinit var editTextSearch: TextInputEditText
-    private lateinit var buttonFilterMode: ImageButton
-
-    private var currentFilterState = FilterState.ALL
+    private var allCids: MutableList<Cid> = mutableListOf()
+    private var currentFilterState: FilterState = FilterState.ALL
+    private var currentSearchQuery: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
 
-        editTextSearch = findViewById(R.id.editTextSearch)
-        buttonFilterMode = findViewById(R.id.buttonFilterMode)
-        recyclerView = findViewById(R.id.recyclerCids)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
+        // Configura Toolbar
+        setSupportActionBar(binding.toolbar)
+
+        // Configura DrawerLayout e NavigationView
+        toggle = ActionBarDrawerToggle(
+            this,
+            binding.drawerLayout,
+            binding.toolbar,
+            R.string.navigation_drawer_open,
+            R.string.navigation_drawer_close
+        )
+        binding.drawerLayout.addDrawerListener(toggle)
+        toggle.syncState()
+        binding.navView.setNavigationItemSelectedListener(this)
+
+        // Inicializa banco de dados e popula se vazio
         dbHelper = CidDatabaseHelper(this)
-        // Tentativa de popular o banco de dados se estiver vazio.
-        // A lógica de verificar se está vazio está dentro de popularSeVazio().
         dbHelper.popularSeVazio()
 
+        // Configura RecyclerView
+        binding.recyclerCids.layoutManager = LinearLayoutManager(this)
 
-        val cidListCompleta = dbHelper.getAllCids().toMutableList()
-        if (cidListCompleta.isEmpty()) {
-            Log.w("MainActivity", "A lista de CIDs está vazia após tentar popular e carregar do banco.")
-            // Você pode querer mostrar uma mensagem para o usuário ou lidar com este caso.
-        }
+        // Carrega dados do banco
+        loadCidsFromDatabase()
 
-        recyclerView.layoutManager = LinearLayoutManager(this)
-        adapter = CidAdapter(cidListCompleta) { cidAtualizado ->
-            val success = dbHelper.updateCid(cidAtualizado)
-            if (success) {
-                Log.d("MainActivity", "CID ID ${cidAtualizado.id} atualizado no banco.")
-                // A lista original `cidListCompleta` contém o objeto que foi modificado,
-                // então a refiltragem deve pegar o estado mais recente.
-            } else {
-                Log.w("MainActivity", "Falha ao atualizar CID ID ${cidAtualizado.id} no banco.")
+        // Inicializa adapter
+        cidAdapter = CidAdapter(
+            allCids,
+            onUpdate = { cid ->
+                // Removida chamada inexistente a updateCid
+                // Atualiza lista local e adapter sem acesso ao banco
+                val index = allCids.indexOfFirst { it.id == cid.id }
+                if (index != -1) {
+                    allCids[index] = cid
+                    cidAdapter.atualizarListaOriginal(ArrayList(allCids))
+                }
+            },
+            onItemClicked = { cid ->
+                val intent = Intent(this, CidDetailActivity::class.java)
+                intent.putExtra(CidDetailActivity.EXTRA_CID_ID, cid.id)
+                startActivity(intent)
             }
-            // Reaplicar filtros para refletir a mudança (ex: favorito/deficiência) na UI.
-            adapter.definirModoFiltro(currentFilterState)
-        }
-        recyclerView.adapter = adapter
+        )
+        binding.recyclerCids.adapter = cidAdapter
 
-        editTextSearch.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+        // Configura TextInputEditText para busca
+        binding.editTextSearch.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) { }
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                adapter.filtrarPorTexto(s?.toString())
+                currentSearchQuery = s?.toString()
+                cidAdapter.definirModoFiltro(currentFilterState, currentSearchQuery)
             }
-            override fun afterTextChanged(s: Editable?) {}
+            override fun afterTextChanged(s: Editable?) { }
         })
 
-        buttonFilterMode.setOnClickListener {
+        // Botão de filtro alterna modo de filtro e atualiza ícone
+        binding.buttonFilterMode.setOnClickListener {
             cicloModoFiltro()
             atualizarIconeBotaoFiltro()
-            adapter.definirModoFiltro(currentFilterState)
+            cidAdapter.definirModoFiltro(currentFilterState, currentSearchQuery)
         }
 
-        // Definir estado inicial do filtro no adapter e atualizar ícone
-        adapter.definirModoFiltro(currentFilterState)
+        // Aplica filtro inicial e ícone do botão
+        cidAdapter.definirModoFiltro(currentFilterState, currentSearchQuery)
         atualizarIconeBotaoFiltro()
     }
 
@@ -85,15 +106,57 @@ class MainActivity : AppCompatActivity() {
             FilterState.FAVORITES -> FilterState.DISABILITIES
             FilterState.DISABILITIES -> FilterState.ALL
         }
-        Log.d("MainActivity", "Modo de filtro alterado para: $currentFilterState")
     }
 
     private fun atualizarIconeBotaoFiltro() {
         val iconRes = when (currentFilterState) {
-            FilterState.ALL -> R.drawable.ic_list // Substitua pelo seu ícone
-            FilterState.FAVORITES -> R.drawable.ic_favorite_all // Substitua pelo seu ícone
-            FilterState.DISABILITIES -> R.drawable.ic_disability_filled // Substitua pelo seu ícone
+            FilterState.ALL -> R.drawable.ic_list
+            FilterState.FAVORITES -> R.drawable.ic_favorite_all
+            FilterState.DISABILITIES -> R.drawable.ic_disability_filled
         }
-        buttonFilterMode.setImageDrawable(ContextCompat.getDrawable(this, iconRes))
+        binding.buttonFilterMode.setImageDrawable(ContextCompat.getDrawable(this, iconRes))
+    }
+
+    private fun loadCidsFromDatabase() {
+        allCids.clear()
+        allCids.addAll(dbHelper.getAllCids())  // carregando do banco
+
+        if (::cidAdapter.isInitialized) {
+            cidAdapter.atualizarListaOriginal(ArrayList(allCids))
+        }
+    }
+
+
+    override fun onResume() {
+        super.onResume()
+        loadCidsFromDatabase()
+        if (::cidAdapter.isInitialized) {
+            cidAdapter.definirModoFiltro(currentFilterState, currentSearchQuery)
+        }
+    }
+
+    override fun onNavigationItemSelected(item: android.view.MenuItem): Boolean {
+        when (item.itemId) {
+            R.id.nav_item_all -> aplicarFiltro(FilterState.ALL, "Exibindo Todos")
+            R.id.nav_item_favorites -> aplicarFiltro(FilterState.FAVORITES, "Exibindo Favoritos")
+            R.id.nav_item_disabilities -> aplicarFiltro(FilterState.DISABILITIES, "Exibindo Deficiências")
+            R.id.nav_item_export -> ExportHelper.exportarParaCSV(this, cidAdapter.getCidsExibida())
+        }
+        binding.drawerLayout.closeDrawer(GravityCompat.START)
+        return true
+    }
+
+    private fun aplicarFiltro(filtro: FilterState, mensagem: String) {
+        currentFilterState = filtro
+        cidAdapter.definirModoFiltro(filtro, currentSearchQuery)
+        Toast.makeText(this, mensagem, Toast.LENGTH_SHORT).show()
+    }
+
+    override fun onBackPressed() {
+        if (binding.drawerLayout.isDrawerOpen(GravityCompat.START)) {
+            binding.drawerLayout.closeDrawer(GravityCompat.START)
+        } else {
+            super.onBackPressed()
+        }
     }
 }

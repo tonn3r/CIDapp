@@ -4,101 +4,88 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.checkbox.MaterialCheckBox
-import java.util.Locale
-
-enum class FilterState {
-    ALL,
-    FAVORITES,
-    DISABILITIES
-}
 
 class CidAdapter(
-    private var cidsCompletaOriginal: MutableList<Cid>,
-    private val onUpdate: (Cid) -> Unit
-) : RecyclerView.Adapter<CidAdapter.CidViewHolder>() {
-
-    private var cidsFiltradosPorTexto: MutableList<Cid> = ArrayList(cidsCompletaOriginal)
-    private var cidsExibida: MutableList<Cid> = ArrayList(cidsFiltradosPorTexto)
+    novaListaOriginal: List<Cid>,
+    private val onUpdate: (Cid) -> Unit,
+    private val onItemClicked: (Cid) -> Unit
+) : ListAdapter<CidAdapter.NormalizedCid, CidAdapter.CidViewHolder>(CidDiffCallback()) {
 
     private var filtroTextoAtual: String? = null
-    private var filtroModoAtual: FilterState = FilterState.ALL // Estado inicial
+    private var filtroModoAtual: FilterState = FilterState.ALL
+
+    // Usa diretamente o campo nomeNormalizado de Cid, não normaliza aqui
+    private var listaOriginalNormalizada: List<NormalizedCid> = novaListaOriginal.map {
+        NormalizedCid(it, it.nomeNormalizado)
+    }
+
+    data class NormalizedCid(val cid: Cid, val textoNormalizado: String)
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): CidViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_cid, parent, false)
-        return CidViewHolder(view, cidsCompletaOriginal, onUpdate)
+        return CidViewHolder(view, onUpdate, onItemClicked)
     }
 
     override fun onBindViewHolder(holder: CidViewHolder, position: Int) {
-        holder.bind(cidsExibida[position])
+        holder.bind(getItem(position).cid)
     }
 
-    override fun getItemCount(): Int = cidsExibida.size
-
-    private fun aplicarFiltros() {
-        // 1. Aplicar filtro de texto
-        cidsFiltradosPorTexto.clear()
-        val queryLower = filtroTextoAtual?.lowercase(Locale.getDefault())?.trim()
-        if (queryLower.isNullOrEmpty()) {
-            cidsFiltradosPorTexto.addAll(cidsCompletaOriginal)
-        } else {
-            cidsCompletaOriginal.forEach { cid ->
-                if (cid.codigo.lowercase(Locale.getDefault()).contains(queryLower) ||
-                    cid.descricao.lowercase(Locale.getDefault()).contains(queryLower)
-                ) {
-                    cidsFiltradosPorTexto.add(cid)
-                }
-            }
-        }
-
-        // 2. Aplicar filtro de modo (ALL, FAVORITES, DISABILITIES)
-        cidsExibida.clear()
-        when (filtroModoAtual) {
-            FilterState.ALL -> {
-                cidsExibida.addAll(cidsFiltradosPorTexto)
-            }
-            FilterState.FAVORITES -> {
-                cidsFiltradosPorTexto.forEach { cid ->
-                    if (cid.favorito) {
-                        cidsExibida.add(cid)
-                    }
-                }
-            }
-            FilterState.DISABILITIES -> {
-                cidsFiltradosPorTexto.forEach { cid ->
-                    if (cid.deficiencia) { // Supondo que seu Cid.kt tem um campo 'deficiencia' (Boolean)
-                        cidsExibida.add(cid)
-                    }
-                }
-            }
-        }
-        notifyDataSetChanged()
-    }
-
+    // O texto recebido aqui já deve estar normalizado externamente antes da busca
     fun filtrarPorTexto(query: String?) {
         filtroTextoAtual = query
         aplicarFiltros()
     }
 
-    fun definirModoFiltro(modo: FilterState) {
+    fun definirModoFiltro(modo: FilterState, textoDeBuscaAtual: String?) {
         filtroModoAtual = modo
+        filtroTextoAtual = textoDeBuscaAtual
         aplicarFiltros()
     }
 
     fun atualizarListaOriginal(novaLista: List<Cid>) {
-        cidsCompletaOriginal.clear()
-        cidsCompletaOriginal.addAll(novaLista)
+        listaOriginalNormalizada = novaLista.map {
+            NormalizedCid(it, it.nomeNormalizado)
+        }
         aplicarFiltros()
     }
 
-    // ViewHolder permanece o mesmo da sua versão anterior,
-    // apenas certifique-se de que o Cid.kt tem o campo 'deficiencia'
+    private fun aplicarFiltros() {
+        val palavrasBusca = filtroTextoAtual
+            ?.lowercase()
+            ?.split("\\s+".toRegex())
+            ?.filter { it.isNotEmpty() }
+            ?: emptyList()
+
+        val filtradosPorTexto = if (palavrasBusca.isEmpty()) {
+            listaOriginalNormalizada
+        } else {
+            listaOriginalNormalizada.filter { normalizedCid ->
+                palavrasBusca.all { normalizedCid.textoNormalizado.contains(it) }
+            }
+        }
+
+        val filtradosPorModo = when (filtroModoAtual) {
+            FilterState.ALL -> filtradosPorTexto
+            FilterState.FAVORITES -> filtradosPorTexto.filter { it.cid.favorito }
+            FilterState.DISABILITIES -> filtradosPorTexto.filter { it.cid.deficiencia }
+        }
+
+        submitList(filtradosPorModo)
+    }
+
+    fun getCidsExibida(): List<Cid> {
+        return currentList.map { it.cid }
+    }
+
     class CidViewHolder(
         itemView: View,
-        private val listaOriginalCompleta: List<Cid>,
-        private val onUpdateCallback: (Cid) -> Unit
+        private val onUpdateCallback: (Cid) -> Unit,
+        private val onItemClickCallback: (Cid) -> Unit
     ) : RecyclerView.ViewHolder(itemView) {
         private val txtCodigo: TextView = itemView.findViewById(R.id.txtCodigo)
         private val txtDescricao: TextView = itemView.findViewById(R.id.txtDescricao)
@@ -112,22 +99,34 @@ class CidAdapter(
             checkFavoritoItem.setOnCheckedChangeListener(null)
             checkFavoritoItem.isChecked = cidAtualExibido.favorito
             checkFavoritoItem.setOnCheckedChangeListener { _, isChecked ->
-                val cidNaListaOriginal = listaOriginalCompleta.find { it.id == cidAtualExibido.id }
-                cidNaListaOriginal?.let {
-                    it.favorito = isChecked
-                    onUpdateCallback(it)
+                if (cidAtualExibido.favorito != isChecked) {
+                    cidAtualExibido.favorito = isChecked
+                    onUpdateCallback(cidAtualExibido)
                 }
             }
 
             checkDeficiencia.setOnCheckedChangeListener(null)
             checkDeficiencia.isChecked = cidAtualExibido.deficiencia
             checkDeficiencia.setOnCheckedChangeListener { _, isChecked ->
-                val cidNaListaOriginal = listaOriginalCompleta.find { it.id == cidAtualExibido.id }
-                cidNaListaOriginal?.let {
-                    it.deficiencia = isChecked // Supondo que seu Cid.kt tem este campo
-                    onUpdateCallback(it)
+                if (cidAtualExibido.deficiencia != isChecked) {
+                    cidAtualExibido.deficiencia = isChecked
+                    onUpdateCallback(cidAtualExibido)
                 }
             }
+
+            itemView.setOnClickListener {
+                onItemClickCallback(cidAtualExibido)
+            }
+        }
+    }
+
+    class CidDiffCallback : DiffUtil.ItemCallback<NormalizedCid>() {
+        override fun areItemsTheSame(oldItem: NormalizedCid, newItem: NormalizedCid): Boolean {
+            return oldItem.cid.id == newItem.cid.id
+        }
+
+        override fun areContentsTheSame(oldItem: NormalizedCid, newItem: NormalizedCid): Boolean {
+            return oldItem.cid == newItem.cid
         }
     }
 }

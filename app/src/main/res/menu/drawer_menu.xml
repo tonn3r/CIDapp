@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/nav_item_all"
+        android:title="Exibir Todos"
+        android:icon="@drawable/ic_list" />
+
+    <item
+        android:id="@+id/nav_item_favorites"
+        android:title="Exibir Favoritos"
+        android:icon="@drawable/ic_favorite_all" />
+
+    <item
+        android:id="@+id/nav_item_disabilities"
+        android:title="Exibir Deficiências"
+        android:icon="@drawable/ic_disability_filled" />
+
+    <item
+        android:id="@+id/nav_item_export"
+        android:title="Exportar CSV"
+        android:icon="@drawable/ic_export" />
+</menu>

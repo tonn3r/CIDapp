@@ -1,5 +1,10 @@
 <resources>
-    <string name="app_name">CIDapp2</string>
-    <string name="content_description_favorito">Marcar como favorito</string>
-    <string name="content_description_deficiencia">Marcar como relacionado à deficiência</string>
+<string name="app_name">CIDapp2</string>
+<string name="content_description_favorito">Marcar como favorito</string>
+<string name="content_description_deficiencia">Marcar como relacionado à deficiência</string>
+
+<!-- Strings para o Navigation Drawer -->
+<string name="navigation_drawer_open">Abrir menu de navegação</string>
+<string name="navigation_drawer_close">Fechar menu de navegação</string>
+    <string name="filter">Filtro</string>
 </resources>
